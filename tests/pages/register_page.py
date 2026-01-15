@@ -17,6 +17,8 @@ class RegisterPage:
         self.driver.get(self.url)
 
     def register(self, name, email, username, password, repass):
+        print('DEBUG: RegisterPage current URL:', self.driver.current_url)
+        print('DEBUG: RegisterPage page source snippet:', self.driver.page_source[:800])
         n = self.driver.find_element(*self.NAME)
         e = self.driver.find_element(*self.EMAIL)
         u = self.driver.find_element(*self.USERNAME)
