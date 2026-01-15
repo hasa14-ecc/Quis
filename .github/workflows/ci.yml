@@ -1,78 +1,116 @@
-name: CI - Selenium E2E
+name: Selenium Testing CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main, master ]
   pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
-  e2e:
+  test:
     runs-on: ubuntu-latest
-
+    
     services:
       mysql:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: quiz_ppl
+          MYSQL_DATABASE: quiz_pengupil
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-cmd="mysqladmin ping"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=20
-
-    env:
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_USER: root
-      DB_PASS: root
-      DB_NAME: quiz_ppl
-      BASE_URL: http://127.0.0.1:8000
+          --health-retries=3
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.2"
-          extensions: mysqli
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mysqli, pdo_mysql
+        coverage: none
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r tests/requirements.txt
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-      - name: Install mysql client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mysql-client
+    - name: Setup MySQL Database
+      run: |
+        mysql -h 127.0.0.1 -u root -proot quiz_pengupil < db/quiz_pengupil.sql
 
-      - name: Import database schema
-        run: |
-          mysql -h 127.0.0.1 -uroot -proot quiz_ppl < db/quiz_pengupil.sql
+    - name: Update database connection
+      run: |
+        sed -i "s/'localhost'/'127.0.0.1'/g" koneksi.php
+        sed -i "s/'root'/\'root\'/g" koneksi.php
+        sed -i "s/''/\'root\'/2" koneksi.php
 
-      - name: Start PHP server
-        run: |
-          php -S 127.0.0.1:8000 -t . > php_server.log 2>&1 &
-          sleep 2
-          curl -I http://127.0.0.1:8000/login.php
+    - name: Start PHP built-in server
+      run: |
+        php -S localhost:8000 &
+        sleep 3
+      env:
+        DB_HOST: 127.0.0.1
+        DB_USER: root
+        DB_PASSWORD: root
+        DB_NAME: quiz_pengupil
 
-      - name: Run Selenium tests
-        run: |
-          python -m pytest -q tests
+    - name: Install Chrome and ChromeDriver
+      run: |
+        # Install Chrome
+        wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
+        
+        # Install ChromeDriver using webdriver-manager (easier and more reliable)
+        pip install webdriver-manager
 
-      - name: Upload server log if failed
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: php-server-log
-          path: php_server.log
+    - name: Verify Setup
+      run: |
+        echo "PHP Version:"
+        php --version
+        echo "Python Version:"
+        python --version
+        echo "Chrome Version:"
+        google-chrome --version
+        echo "Database Connection:"
+        mysql -h 127.0.0.1 -u root -proot -e "SHOW DATABASES;" | grep quiz_pengupil
+
+    - name: Run Selenium Tests
+      run: |
+        cd tests
+        python run_tests.py 2>&1 | tee test_output.log
+      continue-on-error: false
+      env:
+        BASE_URL: http://localhost:8000
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: |
+          tests/*.log
+          tests/test_output.log
+        if-no-files-found: warn
+
+    - name: Test Summary
+      if: always()
+      run: |
+        echo "## Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Database: MySQL 8.0" >> $GITHUB_STEP_SUMMARY
+        echo "- PHP Version: 8.1" >> $GITHUB_STEP_SUMMARY
+        echo "- Python Version: 3.11" >> $GITHUB_STEP_SUMMARY
+        echo "- Selenium Version: 4.16.0" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Test cases executed for Login and Register modules" >> $GITHUB_STEP_SUMMARY
