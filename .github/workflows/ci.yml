@@ -58,7 +58,7 @@ jobs:
 
       - name: Import database schema
         run: |
-          mysql -h 127.0.0.1 -uroot -proot quiz_ppl < db/database.sql
+          mysql -h 127.0.0.1 -uroot -proot quiz_ppl < db/quiz_pengupil.sql
 
       - name: Start PHP server
         run: |
