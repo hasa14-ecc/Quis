@@ -14,8 +14,8 @@ def base_url():
 @pytest.fixture(scope="session")
 def browser():
     opts = Options()
-    # biar kelihatan dulu (jangan headless)
-    # opts.add_argument("--headless=new")
+    # Aktifkan headless agar bisa jalan di CI
+    opts.add_argument("--headless=new")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
     driver.set_window_size(1280, 720)
     yield driver
