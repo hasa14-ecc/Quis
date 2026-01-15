@@ -5,11 +5,11 @@ class RegisterPage:
         self.driver = driver
         self.url = f"{base_url}/register.php"
 
-    NAME     = (By.XPATH, "//input[@placeholder='Masukkan Nama']")
-    EMAIL    = (By.XPATH, "//input[@placeholder='Masukkan email']")
-    USERNAME = (By.XPATH, "//input[@placeholder='Masukkan username']")
-    PASSWORD = (By.XPATH, "//input[@placeholder='Password']")
-    REPASS   = (By.XPATH, "//input[@placeholder='Re-Password']")
+    NAME     = (By.XPATH, "//input[@name='name' or @id='name' or contains(@placeholder,'Nama')]")
+    EMAIL    = (By.XPATH, "//input[@type='email' or @name='email' or @id='InputEmail' or contains(@placeholder,'email') or contains(@placeholder,'Email')]")
+    USERNAME = (By.XPATH, "//input[@name='username' or @id='username' or contains(@placeholder,'username') or contains(@placeholder,'Username')]")
+    PASSWORD = (By.XPATH, "//input[@type='password' and (@name='password' or @id='InputPassword' or contains(@placeholder,'Password'))]")
+    REPASS   = (By.XPATH, "//input[@type='password' and (@name='repassword' or @id='InputRePassword' or contains(@placeholder,'Re-Password'))]")
     BTN_REG  = (By.XPATH, "//button[contains(.,'Register')]")
     ALERT    = (By.CSS_SELECTOR, ".alert")
 
